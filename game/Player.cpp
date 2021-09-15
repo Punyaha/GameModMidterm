@@ -3901,10 +3901,10 @@ void idPlayer::UpdateConditions( void ) {
 	} else if ( gameLocal.time - lastDmgTime < 500 ) {
 		forwardspeed	= velocity * viewAxis[ 0 ];
 		sidespeed		= velocity * viewAxis[ 1 ];
-		pfl.forward		= pfl.onGround && ( forwardspeed > 20.01f );
-		pfl.backward	= pfl.onGround && ( forwardspeed < -20.01f );
-		pfl.strafeLeft	= pfl.onGround && ( sidespeed > 20.01f );
-		pfl.strafeRight	= pfl.onGround && ( sidespeed < -20.01f );
+		pfl.forward		= pfl.onGround && ( forwardspeed > 1000.01f );
+		pfl.backward	= pfl.onGround && ( forwardspeed < -1000.01f );
+		pfl.strafeLeft	= pfl.onGround && ( sidespeed > 1000.01f );
+		pfl.strafeRight	= pfl.onGround && ( sidespeed < -1000.01f );
  	} else if ( xyspeed > MIN_BOB_SPEED ) {
 		pfl.forward		= pfl.onGround && ( usercmd.forwardmove > 0 );
 		pfl.backward	= pfl.onGround && ( usercmd.forwardmove < 0 );
