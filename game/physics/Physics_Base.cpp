@@ -624,7 +624,7 @@ idPhysics_Base::HasGroundContacts
 */
 bool idPhysics_Base::HasGroundContacts( void ) const {
 	int i;
-
+	
 	for ( i = 0; i < contacts.Num(); i++ ) {
 		if ( contacts[i].normal * -gravityNormal > 0.0f ) {
 			return true;
@@ -632,7 +632,6 @@ bool idPhysics_Base::HasGroundContacts( void ) const {
 	}
 	return false;
 }
-
 /*
 ================
 idPhysics_Base::IsGroundEntity

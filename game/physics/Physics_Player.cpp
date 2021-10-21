@@ -42,6 +42,17 @@ const int PMF_TIME_LAND			= 32;		// movementTime is time before rejump
 const int PMF_TIME_KNOCKBACK	= 64;		// movementTime is an air-accelerate only time
 const int PMF_TIME_WATERJUMP	= 128;		// movementTime is waterjump
 const int PMF_ALL_TIMES			= (PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK);
+bool doublejump;
+bool walljump = false;
+bool dontclearjump;
+bool wallrun = false;
+bool walljumped = true;
+idVec3 wallstuff;
+int wallruntime;
+int testing=0;
+int walljumpcd;
+int doublejumps = 0;
+int airdodge = 0;
 
 int c_pmove = 0;
 
@@ -165,14 +176,13 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	float		d, time_left, into, totalMass;
 	idVec3		dir, planes[MAX_CLIP_PLANES];
 	idVec3		end, stepEnd, primal_velocity, endVelocity, endClipVelocity, clipVelocity;
-	trace_t		trace, stepTrace, downTrace;
+	trace_t		trace, stepTrace, downTrace, walltrace;
 	bool		nearGround, stepped, pushed;
 
 	numbumps = 4;
 
 	primal_velocity = current.velocity;
-
-	if ( gravity ) {
+	if (gravity) {
 		endVelocity = current.velocity + gravityVector * frametime;
 		current.velocity = ( current.velocity + endVelocity ) * 0.5f;
 		primal_velocity = endVelocity;
@@ -186,7 +196,6 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	}
 
 	time_left = frametime;
-
 	// never turn against the ground plane
 	if ( groundPlane ) {
 		numplanes = 1;
@@ -199,9 +208,8 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 	planes[numplanes] = current.velocity;
 	planes[numplanes].Normalize();
 	numplanes++;
-
+	//whenever a collision happens it gets processed here apparently
 	for ( bumpcount = 0; bumpcount < numbumps; bumpcount++ ) {
-
 		// calculate position we are trying to move to
 		end = current.origin + time_left * current.velocity;
 
@@ -212,7 +220,36 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 // RAVEN END
 		time_left -= time_left * trace.fraction;
 		current.origin = trace.endpos;
+		//This is something we added. If it breaks everything, delete this.
+		gameLocal.Translation(self, walltrace, current.origin, current.origin-trace.c.normal*3, clipModel, clipModel->GetAxis(), clipMask, self);
+		testing += 1;
+		//common->Printf("%f,%f,%f %i\n", walltrace.c.normal.x, walltrace.c.normal.y, walltrace.c.normal.z, testing);
+		//common->Printf("%f,%f,%f %i\n", trace.c.normal.x, trace.c.normal.y, trace.c.normal.z, testing);
+		if (!walljumped && !groundPlane && (walltrace.c.normal * -gravityNormal) != -1 && (walltrace.c.normal * -gravityNormal) != 1 && walltrace.fraction < 1.0f) {
+			//We did it boys
+			walljump = true;
+			if (!wallrun) {
+				wallruntime = 1000;
+				wallrun = true;
+			}
+			wallstuff = walltrace.c.normal;
+			//common->Printf("%f,%f,%f\n",wallstuff.x, wallstuff.y, wallstuff.z);
 
+		}
+		else {
+			if (!walljumpcd) {
+				walljumpcd = 10;
+			}
+			else {
+				walljumpcd--;
+				if (!walljumpcd) {
+					walljumped = false;
+				}
+			}
+
+			wallrun = false;
+			walljump = false;
+		}
 		// if moved the entire distance
 		if ( trace.fraction >= 1.0f ) {
 			break;
@@ -322,7 +359,6 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 			current.velocity = vec3_origin;
 			return true;
 		}
-
 		//
 		// if this is the same plane we hit before, nudge velocity out along it,
 		// which fixes some epsilon issues with non-axial planes
@@ -401,6 +437,7 @@ bool idPhysics_Player::SlideMove( bool gravity, bool stepUp, bool stepDown, bool
 
 					// stop dead at a tripple plane interaction
 					current.velocity = vec3_origin;
+					wallrun = false;
 					return true;
 				}
 			}
@@ -472,7 +509,8 @@ void idPhysics_Player::Friction( void ) {
 // nmckenzie: allow trying custom frictions
 	if ( pm_frictionoverride.GetFloat() > -1 ) {
 		drop += speed * pm_frictionoverride.GetFloat() * frametime;
-	} else if ( current.movementType == PM_SPECTATOR ) {
+	} 
+	else if ( current.movementType == PM_SPECTATOR ) {
 // RAVEN END
 		drop += speed * PM_FLYFRICTION * frametime;
 	}
@@ -485,9 +523,10 @@ void idPhysics_Player::Friction( void ) {
 				control = speed < PM_STOPSPEED ? PM_STOPSPEED : speed;
 // RAVEN BEGIN
 // bdube: crouch slide
-				if ( current.crouchSlideTime > 0 ) {
+				if ( current.crouchSlideTime > 0 && current.movementFlags & PMF_DUCKED ) {
 					drop += control * PM_SLIDEFRICTION * frametime;
-				} else {
+				} 
+				else {
 					drop += control * PM_FRICTION * frametime;
 				}
 // RAVEN END				
@@ -500,7 +539,14 @@ void idPhysics_Player::Friction( void ) {
 	}
 	// apply air friction
 	else {
-		drop += speed * PM_AIRFRICTION * frametime;
+		if (airdodge > 0) {
+			control = speed < PM_STOPSPEED ? PM_STOPSPEED : speed;
+			drop += control * PM_FRICTION * frametime;
+			airdodge--;
+		}
+		else {
+			drop += speed * PM_AIRFRICTION * frametime;
+		}
 	}
 
 	// scale the velocity
@@ -639,15 +685,18 @@ void idPhysics_Player::AirMove( void ) {
 
 // RAVEN BEGIN
 // bdube: crouch time
-	// if the player isnt pressing crouch and heading down then accumulate slide time
-	if ( command.upmove >= 0 && current.velocity * gravityNormal > 0 ) {	
-		current.crouchSlideTime += framemsec * 2;
-		if ( current.crouchSlideTime > 2000 ) {
-			current.crouchSlideTime = 2000;
+	// if the player isnt pressing crouch and heading down then accumulate slide time, Now it also checks if the player is sprinting or not
+	if (command.upmove >= 0 && current.velocity * gravityNormal > 0) {
+		current.crouchSlideTime += framemsec * 50;
+		if ( current.crouchSlideTime > 1000 ) {
+			current.crouchSlideTime = 1000;
 		}
 	}
+	if (wallruntime>0 && wallrun) {
+		current.velocity.z = 0;
+		wallruntime -= framemsec;
+	}
 // RAVEN END
-
 	idPhysics_Player::Friction();
 
 	scale = idPhysics_Player::CmdScale( command );
@@ -665,7 +714,7 @@ void idPhysics_Player::AirMove( void ) {
 	wishspeed *= scale;
 
 	// not on ground, so little effect on velocity
-	idPhysics_Player::Accelerate( wishdir, wishspeed, Pm_AirAccelerate() );
+	idPhysics_Player::Accelerate( wishdir, wishspeed, Pm_Accelerate() );//Pm_AirAccelerate
 
 	// we may have a ground plane that is very steep, even
 	// though we don't have a groundentity
@@ -673,7 +722,33 @@ void idPhysics_Player::AirMove( void ) {
 	if ( groundPlane ) {
 		current.velocity.ProjectOntoPlane( groundTrace.c.normal, OVERCLIP );
 	}
-
+	if (walljump) {
+		if (idPhysics_Player::CheckJump()) {
+			wallrun = false;
+			walljumped = true;
+		}
+	}
+	else if (doublejump||walljump) {
+		if (idPhysics_Player::CheckJump()) {
+			// jumped away
+			if (!dontclearjump) {
+				doublejump = false;
+			}
+			if (doublejumps == 0) {
+				dontclearjump = false;
+			}
+			else {
+				doublejumps--;
+			}
+			if (waterLevel > WATERLEVEL_FEET) {
+				idPhysics_Player::WaterMove();
+			}
+			else {
+				idPhysics_Player::AirMove();
+			}
+			return;
+		}
+	}
 	// NOTE: enable stair checking while moving through the air in multiplayer to allow bunny hopping onto stairs
 	idPhysics_Player::SlideMove( true, gameLocal.isMultiplayer, false, false );
 }
@@ -691,13 +766,25 @@ void idPhysics_Player::WalkMove( void ) {
 	float		accelerate;
 	idVec3		oldVelocity, vel;
 	float		oldVel, newVel;
-
+	walljump = false;
+	wallrun = false;
+	wallstuff.x = 0;
+	wallstuff.y = 0;
+	wallstuff.z = 0;
+	airdodge = 0;
+	if ((current.velocity.x != 0.0f || current.velocity.y != 0.0f) && current.movementFlags != 1) {
+		current.crouchSlideTime += framemsec * 50;
+		if (current.crouchSlideTime > 1000) {
+			current.crouchSlideTime = 1000;
+		}
+	}
 	if ( waterLevel > WATERLEVEL_WAIST && ( viewForward * groundTrace.c.normal ) > 0.0f ) {
 		// begin swimming
 		idPhysics_Player::WaterMove();
 		return;
 	}
-
+	doublejump = true;
+	doublejumps = 1;
 	if ( idPhysics_Player::CheckJump() ) {
 		// jumped away
 		if ( waterLevel > WATERLEVEL_FEET ) {
@@ -858,7 +945,7 @@ void idPhysics_Player::NoclipMove( void ) {
 	wishspeed = wishdir.Normalize();
 	wishspeed *= scale;
 
-	idPhysics_Player::Accelerate( wishdir, wishspeed, Pm_Accelerate() );
+	idPhysics_Player::Accelerate( wishdir, wishspeed, PM_ACCELERATE_SP );
 
 	// move
 	current.origin += frametime * current.velocity;
@@ -1112,7 +1199,7 @@ void idPhysics_Player::CheckGround( bool checkStuck ) {
 	// if the player didn't have ground contacts the previous frame
 	if ( !hadGroundContacts ) {
 		// don't do landing time if we were just going down a slope
-		if ( (current.velocity * -gravityNormal) < -200.0f ) {
+		if ((current.velocity * -gravityNormal) < -200.0f) {
 			// don't allow another jump for a little while
 			current.movementFlags |= PMF_TIME_LAND;
 			current.movementTime = 250;
@@ -1148,12 +1235,14 @@ void idPhysics_Player::CheckDuck( void ) {
 
 	if ( current.movementType == PM_DEAD ) {
 		maxZ = pm_deadheight.GetFloat();
-	} else {
+	} 
+	else {
 		// stand up when up against a ladder
 		if ( command.upmove < 0 && !ladder ) {
 			// duck
 			current.movementFlags |= PMF_DUCKED;
-		} else {
+		} 
+		else {
 			// stand up if possible
 			if ( current.movementFlags & PMF_DUCKED ) {
 				// try to stand up
@@ -1176,11 +1265,12 @@ void idPhysics_Player::CheckDuck( void ) {
 			}
 // RAVEN END
 			maxZ = pm_crouchheight.GetFloat();			
-		} else {
+		} 
+		else {
 			maxZ = pm_normalheight.GetFloat();
 // RAVEN BEGIN
-// bdube: crouch slide
-			if ( groundPlane && current.crouchSlideTime ) {
+// bdube: crouch slide 
+			if (groundPlane && current.crouchSlideTime ) {
 				current.crouchSlideTime = 0;
 			}
 // RAVEN END			
@@ -1273,29 +1363,40 @@ idPhysics_Player::CheckJump
 */
 bool idPhysics_Player::CheckJump( void ) {
 	idVec3 addVelocity;
-
-	if ( command.upmove < 10 ) {
+	idVec3 walladd;
+	if (command.upmove < 10) {
 		// not holding jump
 		return false;
 	}
 
 	// must wait for jump to be released
-	if ( current.movementFlags & PMF_JUMP_HELD ) {
+	if (current.movementFlags & PMF_JUMP_HELD) {
 		return false;
 	}
 
 	// don't jump if we can't stand up
-	if ( current.movementFlags & PMF_DUCKED ) {
+	/*if (current.movementFlags & PMF_DUCKED) {
 		return false;
-	}
-
+	}*/
 	groundPlane = false;		// jumping away
 	walking = false;
 	current.movementFlags |= PMF_JUMP_HELD | PMF_JUMPED;
 
 	addVelocity = 2.0f * maxJumpHeight * -gravityVector;
 	addVelocity *= idMath::Sqrt( addVelocity.Normalize() );
+	if (walljump) {
+		wallstuff.z = 0;
+		walladd = 2.0f * maxJumpHeight * wallstuff;
+		walljump = false;
+		dontclearjump = true;
+		current.velocity.x = 0;
+		current.velocity.y = 0;
+		current.velocity += walladd;
+	}
+	current.velocity.z = 0;
 	current.velocity += addVelocity;
+	wallstuff.x= 0;
+	wallstuff.y = 0;
 
 // RAVEN BEGIN
 // bdube: crouch slide, nick maggoire is awesome
@@ -2104,6 +2205,12 @@ idPhysics_Player::SetLinearVelocity
 */
 void idPhysics_Player::SetLinearVelocity( const idVec3 &newLinearVelocity, int id ) {
 	current.velocity = newLinearVelocity;
+}
+
+void idPhysics_Player::SetDodgeVelocity() {
+	if (!groundPlane) {
+		airdodge = 15;
+	}
 }
 
 /*

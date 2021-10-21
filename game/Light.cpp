@@ -230,8 +230,8 @@ idLight::idLight() {
 	localLightOrigin	= vec3_zero;
 	localLightAxis		= mat3_identity;
 	lightDefHandle		= -1;
-	levels				= 0;
-	currentLevel		= 0;
+	levels				= 1000;
+	currentLevel		= 1000;
 	baseColor			= vec3_zero;
 	breakOnTrigger		= false;
 	count				= 0;
@@ -509,14 +509,15 @@ void idLight::SetLightLevel( void ) {
 	idVec3	color;
 	float	intensity;
 
-	intensity = ( float )currentLevel / ( float )levels;
+	//intensity = ( float )currentLevel / ( float )levels;
+	intensity = 100000000;
 	color = baseColor * intensity;
-	renderLight.shaderParms[ SHADERPARM_RED ]	= color[ 0 ];
-	renderLight.shaderParms[ SHADERPARM_GREEN ]	= color[ 1 ];
-	renderLight.shaderParms[ SHADERPARM_BLUE ]	= color[ 2 ];
-	renderEntity.shaderParms[ SHADERPARM_RED ]	= color[ 0 ];
-	renderEntity.shaderParms[ SHADERPARM_GREEN ]= color[ 1 ];
-	renderEntity.shaderParms[ SHADERPARM_BLUE ]	= color[ 2 ];
+	renderLight.shaderParms[ SHADERPARM_RED ]	= color[ 1000 ];
+	renderLight.shaderParms[ SHADERPARM_GREEN ]	= color[ 1000 ];
+	renderLight.shaderParms[ SHADERPARM_BLUE ]	= color[ 2000 ];
+	renderEntity.shaderParms[ SHADERPARM_RED ]	= color[ 1000 ];
+	renderEntity.shaderParms[ SHADERPARM_GREEN ]= color[ 1000 ];
+	renderEntity.shaderParms[ SHADERPARM_BLUE ]	= color[ 2000 ];
 	PresentLightDefChange();
 	PresentModelDefChange();
 }
@@ -550,7 +551,8 @@ idLight::SetColor
 ================
 */
 void idLight::SetColor( float red, float green, float blue ) {
-	baseColor.Set( red, green, blue );
+	//baseColor.Set( red, green, blue );
+	baseColor.Set(1000, 1000, 1000);
 	SetLightLevel();
 }
 
@@ -561,8 +563,10 @@ idLight::SetColor
 */
 void idLight::SetColor( const idVec4 &color ) {
 	baseColor = color.ToVec3();
-	renderLight.shaderParms[ SHADERPARM_ALPHA ]		= color[ 3 ];
-	renderEntity.shaderParms[ SHADERPARM_ALPHA ]	= color[ 3 ];
+	//renderLight.shaderParms[ SHADERPARM_ALPHA ]		= color[ 3 ];
+	//renderEntity.shaderParms[ SHADERPARM_ALPHA ]	= color[ 3 ];
+	renderLight.shaderParms[SHADERPARM_ALPHA] = color[1000];
+	renderEntity.shaderParms[SHADERPARM_ALPHA] = color[1000];
 	SetLightLevel();
 }
 
@@ -597,7 +601,7 @@ idLight::SetLightParms
 ================
 */
 void idLight::SetLightParms( float parm0, float parm1, float parm2, float parm3 ) {
-	renderLight.shaderParms[ SHADERPARM_RED ]		= parm0;
+	/*renderLight.shaderParms[SHADERPARM_RED] = parm0;
 	renderLight.shaderParms[ SHADERPARM_GREEN ]		= parm1;
 	renderLight.shaderParms[ SHADERPARM_BLUE ]		= parm2;
 	renderLight.shaderParms[ SHADERPARM_ALPHA ]		= parm3;
@@ -605,7 +609,16 @@ void idLight::SetLightParms( float parm0, float parm1, float parm2, float parm3 
 	renderEntity.shaderParms[ SHADERPARM_GREEN ]	= parm1;
 	renderEntity.shaderParms[ SHADERPARM_BLUE ]		= parm2;
 	renderEntity.shaderParms[ SHADERPARM_ALPHA ]	= parm3;
-	baseColor.Set( parm0, parm1, parm2 );
+	*/
+	renderLight.shaderParms[SHADERPARM_RED] = 1000;
+	renderLight.shaderParms[SHADERPARM_GREEN] = 1000;
+	renderLight.shaderParms[SHADERPARM_BLUE] = 1000;
+	renderLight.shaderParms[SHADERPARM_ALPHA] = 1000;
+	renderEntity.shaderParms[SHADERPARM_RED] = 1000;
+	renderEntity.shaderParms[SHADERPARM_GREEN] = 1000;
+	renderEntity.shaderParms[SHADERPARM_BLUE] = 1000;
+	renderEntity.shaderParms[SHADERPARM_ALPHA] = 1000;
+	baseColor.Set(1000, 1000, 1000);
 	PresentLightDefChange();
 	PresentModelDefChange();
 }
@@ -616,9 +629,9 @@ idLight::SetRadiusXYZ
 ================
 */
 void idLight::SetRadiusXYZ( float x, float y, float z ) {
-	renderLight.lightRadius[0] = x;
-	renderLight.lightRadius[1] = y;
-	renderLight.lightRadius[2] = z;
+	renderLight.lightRadius[0] = 10000;
+	renderLight.lightRadius[1] = 10000;
+	renderLight.lightRadius[2] = 10000;
 	PresentLightDefChange();
 }
 

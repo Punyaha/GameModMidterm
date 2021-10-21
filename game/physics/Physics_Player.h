@@ -99,6 +99,7 @@ public:	// common physics interface
 	void					Rotate( const idRotation &rotation, int id = -1 );
 
 	void					SetLinearVelocity( const idVec3 &newLinearVelocity, int id = 0 );
+	void					SetDodgeVelocity();
 
 	const idVec3 &			GetLinearVelocity( int id = 0 ) const;
 

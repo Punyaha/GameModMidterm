@@ -118,6 +118,7 @@ public:	// common physics interface
 // RAVEN END
 
 	bool					HasGroundContacts( void ) const;
+	bool					HasWallContacts(void) const; //Me, Punyaha Mukherjee, made this. If shit breaks, get rid of it.
 	bool					IsGroundEntity( int entityNum ) const;
 	bool					IsGroundClipModel( int entityNum, int id ) const;
 

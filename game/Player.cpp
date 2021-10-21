@@ -116,7 +116,10 @@ const idEventDef EV_Player_DisableObjectives( "disableObjectives" );
 
 // mekberg: don't suppress showing of new objectives anymore
 const idEventDef EV_Player_AllowNewObjectives( "<allownewobjectives>" );
-
+int dodgeupgrade = 1;
+int Dodge = dodgeupgrade;
+int dodgetimer = 0;
+int dodgetimer2 = 0;
 // RAVEN END
 
 CLASS_DECLARATION( idActor, idPlayer )
@@ -1672,7 +1675,7 @@ void idPlayer::Init( void ) {
 	// initialize the script variables
 	memset ( &pfl, 0, sizeof( pfl ) );
 	pfl.onGround = true;
-	pfl.noFallingDamage = false;
+	pfl.noFallingDamage = true;
 
 	// Start in idle
 	SetAnimState( ANIMCHANNEL_TORSO, "Torso_Idle", 0 );
@@ -3898,19 +3901,22 @@ void idPlayer::UpdateConditions( void ) {
  		pfl.backward	= false;
  		pfl.strafeLeft	= false;
  		pfl.strafeRight	= false;
-	} else if ( gameLocal.time - lastDmgTime < 500 ) {
+	} 
+	else if ( gameLocal.time - lastDmgTime < 500 ) {
 		forwardspeed	= velocity * viewAxis[ 0 ];
 		sidespeed		= velocity * viewAxis[ 1 ];
-		pfl.forward		= pfl.onGround && ( forwardspeed > 1000.01f );
-		pfl.backward	= pfl.onGround && ( forwardspeed < -1000.01f );
-		pfl.strafeLeft	= pfl.onGround && ( sidespeed > 1000.01f );
-		pfl.strafeRight	= pfl.onGround && ( sidespeed < -1000.01f );
- 	} else if ( xyspeed > MIN_BOB_SPEED ) {
+		pfl.forward		= pfl.onGround && ( forwardspeed > 20.01f );
+		pfl.backward	= pfl.onGround && ( forwardspeed < -20.01f );
+		pfl.strafeLeft	= pfl.onGround && ( sidespeed > 20.01f );
+		pfl.strafeRight	= pfl.onGround && ( sidespeed < -20.01f );
+ 	} 
+	else if ( xyspeed > MIN_BOB_SPEED ) {
 		pfl.forward		= pfl.onGround && ( usercmd.forwardmove > 0 );
 		pfl.backward	= pfl.onGround && ( usercmd.forwardmove < 0 );
 		pfl.strafeLeft	= pfl.onGround && ( usercmd.rightmove < 0 );
 		pfl.strafeRight	= pfl.onGround && ( usercmd.rightmove > 0 );
- 	} else {
+ 	} 
+	else {
  		pfl.forward		= false;
  		pfl.backward	= false;
  		pfl.strafeLeft	= false;
@@ -7547,26 +7553,26 @@ void idPlayer::CrashLand( const idVec3 &oldOrigin, const idVec3 &oldVelocity ) {
 		pfl.hardLanding = true;
 		landChange = -32;
 		landTime = gameLocal.time;
- 		if ( !noDamage ) {
- 			pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
- 			Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_fatalfall", 1.0f, 0 );
- 		}
+ 		//if ( !noDamage ) {
+ 		//	pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
+ 		//	Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_fatalfall", 1.0f, 0 );
+ 		//}
 	} else if ( delta > hardFallDelta && hardFallDelta > 0.0f ) {
 		pfl.hardLanding = true;
 		landChange	= -24;
 		landTime	= gameLocal.time;
- 		if ( !noDamage ) {
- 			pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
- 			Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_hardfall", 1.0f, 0 );
- 		}
+ 		//if ( !noDamage ) {
+ 		//	pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
+ 		//	Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_hardfall", 1.0f, 0 );
+ 		//}
 	} else if ( delta > softFallDelta && softFallDelta > 0.0f ) {
 		pfl.softLanding = true;
  		landChange	= -16;
  		landTime	= gameLocal.time;
- 		if ( !noDamage ) {
- 			pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
- 			Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_softfall", 1.0f, 0 );
-		}
+ 		//if ( !noDamage ) {
+ 		//	pain_debounce_time = gameLocal.time + pain_delay + 1;  // ignore pain since we'll play our landing anim
+ 		//	Damage( NULL, NULL, idVec3( 0, 0, -1 ), "damage_softfall", 1.0f, 0 );
+		//}
 	} else if ( delta > noFallDelta && noFallDelta > 0.0f ) {
 		pfl.softLanding = true;
 		landChange	= -8;
@@ -8175,7 +8181,7 @@ int GetItemBuyImpulse( const char* itemName )
 		{ "weapon_lightninggun",			IMPULSE_107, },
 		//									IMPULSE_108 - Unused
 		{ "weapon_napalmgun",				IMPULSE_109, },
-		//		{ "weapon_dmg",						IMPULSE_110, },
+		{ "weapon_dmg",						IMPULSE_110, },
 		//									IMPULSE_111 - Unused
 		//									IMPULSE_112 - Unused
 		//									IMPULSE_113 - Unused
@@ -8747,8 +8753,9 @@ void idPlayer::AdjustSpeed( void ) {
  	} else if ( !physicsObj.OnLadder() && ( usercmd.buttons & BUTTON_RUN ) && ( usercmd.forwardmove || usercmd.rightmove ) && ( usercmd.upmove >= 0 ) ) {
 		bobFrac = 1.0f;
 		speed = pm_speed.GetFloat();
-	} else {
-		speed = pm_walkspeed.GetFloat();
+	} 
+	else {
+		speed = pm_speed.GetFloat();
 		bobFrac = 0.0f;
 	}
 
@@ -8757,7 +8764,31 @@ void idPlayer::AdjustSpeed( void ) {
 	if ( influenceActive == INFLUENCE_LEVEL3 ) {
 		speed *= 0.33f;
 	}
-
+	if (usercmd.buttons == 16 && Dodge > 0 && dodgetimer2 == 0) {
+		common->Printf("what button am I pressing? %i\n", usercmd.buttons);
+		idVec3 woosh = physicsObj.GetLinearVelocity();
+		woosh.z = 0;
+		woosh *= 6.0f;
+		physicsObj.SetLinearVelocity(woosh);
+		physicsObj.SetDodgeVelocity();
+		dodgetimer2 = 15;
+		Dodge--;
+	}
+	else {
+		if (dodgetimer2 > 0) {
+			dodgetimer2--;
+		}
+		if (Dodge < dodgeupgrade && dodgetimer==0) {
+			dodgetimer = 50;
+		}
+		else if (dodgetimer > 0) {
+			common->Printf("Caught in a landslide no escape from reality.%i\n", dodgetimer);
+			dodgetimer--;
+			if (dodgetimer == 0 && Dodge < dodgeupgrade) {
+				Dodge++;
+			}
+		}
+	}
 	physicsObj.SetSpeed( speed, pm_crouchspeed.GetFloat() );
 }
 
@@ -11555,12 +11586,8 @@ idPlayer::Event_AllowFallDamage
 ==================
 */
 void idPlayer::Event_AllowFallDamage( int toggle ) {
-	if( toggle )	{
-		pfl.noFallingDamage = false;
-	} else {
-		pfl.noFallingDamage = true;
-	}
-
+	common->Printf("-------------->>>>>>>>>This is doing something now");
+	pfl.noFallingDamage = true;
 }
 /*
 ==================
@@ -13563,7 +13590,7 @@ idPlayer::SetInstance
 ===============
 */
 void idPlayer::SetInstance( int newInstance ) {
-	common->DPrintf( "idPlayer::SetInstance() - Setting instance for '%s' to %d\n", name.c_str(), newInstance );
+	common->Printf( "idPlayer::SetInstance() - Setting instance for '%s' to %d\n", name.c_str(), newInstance );
 	idEntity::SetInstance( newInstance );
 
 	if( head.GetEntity() ) {
