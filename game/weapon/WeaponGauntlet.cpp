@@ -3,6 +3,7 @@
 
 #include "../Game_local.h"
 #include "../Weapon.h"
+#include "../Projectile.h"
 
 class rvWeaponGauntlet : public rvWeapon {
 public:
@@ -215,7 +216,7 @@ void rvWeaponGauntlet::Attack ( void ) {
 	gameLocal.TracePoint(	owner, tr, 
 							playerViewOrigin, 
 							playerViewOrigin + playerViewAxis[0] * range, 
-							MASK_SHOT_RENDERMODEL, owner );
+							MASK_SHOT_DEFLECT, owner );
 // RAVEN END
 	owner->WeaponFireFeedback( &weaponDef->dict );
 
@@ -231,6 +232,7 @@ void rvWeaponGauntlet::Attack ( void ) {
 		
 	// Entity we hit?
 	ent = gameLocal.entities[tr.c.entityNum];
+	common->Printf("we hit something\n");
 
 	// If the impact material changed then stop the impact effect 
 	if ( (tr.c.materialType && tr.c.materialType->Index ( ) != impactMaterial) ||
@@ -285,14 +287,18 @@ void rvWeaponGauntlet::Attack ( void ) {
 			if ( ent->fl.takedamage ) {
 				float dmgScale = 1.0f;
 				dmgScale *= owner->PowerUpModifier( PMOD_MELEE_DAMAGE );
-				ent->Damage ( owner, owner, playerViewAxis[0], spawnArgs.GetString ( "def_damage" ), dmgScale, 0 );
+				ent->Damage ( owner, owner, playerViewAxis[0], spawnArgs.GetString ( "def_damage" ), 1000.0f, 0 );
 				StartSound( "snd_hit", SND_CHANNEL_ANY, 0, false, NULL );
 				if ( ent->spawnArgs.GetBool( "bleed" ) ) {
 					PlayLoopSound( LOOP_FLESH );
 				} else {
 					PlayLoopSound( LOOP_WALL );
 				}
-			} else {
+			} 
+			else if (ent->IsType(idProjectile::GetClassType())) {
+				((idProjectile*)ent)->idProjectile::reverseVelocity();
+			}
+			else {
 				PlayLoopSound( LOOP_WALL );
 			}
 		} else {

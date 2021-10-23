@@ -566,6 +566,8 @@ public:
 	bool					GiveWeaponMods				( int weapon, int mods );
 	void					GiveWeaponMod				( const char* weaponmod );
 
+	bool					IsDeflecting				(void);
+
 	int						SlotForWeapon				( const char *weaponName );
 
 	idEntity*				DropItem					( const char* itemClass, const idDict& customArgs, const idVec3& velocity = vec3_origin ) const; 

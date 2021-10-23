@@ -50,6 +50,7 @@ public :
 
 	static idVec3			GetVelocity( const idDict *projectile );
 	static idVec3			GetGravity( const idDict *projectile );
+	void			reverseVelocity();
 
 	void					SetSpeed		( float s, int accelTime = 0 );
 	float					GetSpeed		( void ) const;

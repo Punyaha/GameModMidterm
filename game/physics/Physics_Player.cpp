@@ -42,9 +42,7 @@ const int PMF_TIME_LAND			= 32;		// movementTime is time before rejump
 const int PMF_TIME_KNOCKBACK	= 64;		// movementTime is an air-accelerate only time
 const int PMF_TIME_WATERJUMP	= 128;		// movementTime is waterjump
 const int PMF_ALL_TIMES			= (PMF_TIME_WATERJUMP|PMF_TIME_LAND|PMF_TIME_KNOCKBACK);
-bool doublejump;
 bool walljump = false;
-bool dontclearjump;
 bool wallrun = false;
 bool walljumped = true;
 idVec3 wallstuff;
@@ -52,6 +50,7 @@ int wallruntime;
 int testing=0;
 int walljumpcd;
 int doublejumps = 0;
+int doublejumpupgrade = 1;
 int airdodge = 0;
 
 int c_pmove = 0;
@@ -728,18 +727,10 @@ void idPhysics_Player::AirMove( void ) {
 			walljumped = true;
 		}
 	}
-	else if (doublejump||walljump) {
+	else if (doublejumps) {
 		if (idPhysics_Player::CheckJump()) {
 			// jumped away
-			if (!dontclearjump) {
-				doublejump = false;
-			}
-			if (doublejumps == 0) {
-				dontclearjump = false;
-			}
-			else {
-				doublejumps--;
-			}
+			doublejumps--;
 			if (waterLevel > WATERLEVEL_FEET) {
 				idPhysics_Player::WaterMove();
 			}
@@ -783,8 +774,7 @@ void idPhysics_Player::WalkMove( void ) {
 		idPhysics_Player::WaterMove();
 		return;
 	}
-	doublejump = true;
-	doublejumps = 1;
+	doublejumps = doublejumpupgrade;
 	if ( idPhysics_Player::CheckJump() ) {
 		// jumped away
 		if ( waterLevel > WATERLEVEL_FEET ) {
@@ -1388,7 +1378,6 @@ bool idPhysics_Player::CheckJump( void ) {
 		wallstuff.z = 0;
 		walladd = 2.0f * maxJumpHeight * wallstuff;
 		walljump = false;
-		dontclearjump = true;
 		current.velocity.x = 0;
 		current.velocity.y = 0;
 		current.velocity += walladd;
@@ -2211,6 +2200,10 @@ void idPhysics_Player::SetDodgeVelocity() {
 	if (!groundPlane) {
 		airdodge = 15;
 	}
+}
+
+void idPhysics_Player::Djumper() {
+	doublejumpupgrade = 2;
 }
 
 /*

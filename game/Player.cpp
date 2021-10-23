@@ -120,6 +120,9 @@ int dodgeupgrade = 1;
 int Dodge = dodgeupgrade;
 int dodgetimer = 0;
 int dodgetimer2 = 0;
+int deflectionwindow = 20;
+int deflectionrecharge = 5;
+bool deflection = false;
 // RAVEN END
 
 CLASS_DECLARATION( idActor, idPlayer )
@@ -1374,7 +1377,6 @@ void idPlayer::SetWeapon( int weaponIndex ) {
 	if ( weapon && weaponIndex == currentWeapon ) {
 		return;
 	}
-	
 	// Clear the weapon entity
 	delete weapon;
 	weapon = NULL;
@@ -1382,7 +1384,10 @@ void idPlayer::SetWeapon( int weaponIndex ) {
 	previousWeapon	= currentWeapon;
 	currentWeapon	= weaponIndex;
 	weaponGone		= false;		
-
+	if (currentWeapon != 11) {
+		common->Printf("Stop being able to deflect\n");
+		deflection = false;
+	}
 	if ( weaponIndex < 0 ) {
 		weaponGone = true;
 		return;
@@ -1980,7 +1985,7 @@ void idPlayer::Spawn( void ) {
 		}
 // RAVEN BEGIN
 // mekberg: set to blaster now and disable the weapon.
-		idealWeapon = SlotForWeapon ( "weapon_blaster" ); 
+		idealWeapon = SlotForWeapon ( "weapon_gauntlet" ); 
 		Event_DisableWeapon( );
 // RAVEN END
 	} else {
@@ -4288,32 +4293,11 @@ float idPlayer::PowerUpModifier( int type ) {
 	float mod = 1.0f;
 
 	if ( PowerUpActive( POWERUP_QUADDAMAGE ) ) {
-		switch( type ) {
-			case PMOD_PROJECTILE_DAMAGE: {
-				mod *= 3.0f;
-				break;
-			}
-			case PMOD_MELEE_DAMAGE: {
-				mod *= 3.0f;
-				break;
-			}
-			case PMOD_PROJECTILE_DEATHPUSH: {
-				mod *= 2.0f;
-				break;
-			}
-		}
+		dodgeupgrade = 2;
 	}
 
 	if ( PowerUpActive( POWERUP_HASTE ) ) {
-		switch ( type ) {
-			case PMOD_SPEED:	
-				mod *= 1.3f;
-				break;
-
-			case PMOD_FIRERATE:
-				mod *= 0.7f;
-				break;
-		}
+		physicsObj.Djumper();
 	}
 
 	// Arena CTF powerups
@@ -6058,7 +6042,24 @@ void idPlayer::Weapon_Combat( void ) {
 
 	if ( weapon ) {
 		weapon->RaiseWeapon();
-
+		if (currentWeapon == 11 && !(usercmd.buttons & BUTTON_ATTACK)) {
+			if (deflection == true) {
+				common->Printf("Ninja Style\n");
+				deflectionwindow--;
+				deflection = true;
+				if (deflectionwindow == 0) {
+					deflection = false;
+				}
+			}
+			else if (deflectionrecharge > 0 && deflectionwindow == 0 ) {
+				common->Printf("Death by a thousand bullets\n");
+				deflectionrecharge--;
+			}
+			else {
+				deflectionwindow = 20;
+				deflectionrecharge = 5;
+			}
+		}
  		if ( weapon->IsReloading() ) {
  			if ( !pfl.reload ) {
  				pfl.reload = true;
@@ -6115,7 +6116,28 @@ void idPlayer::Weapon_Combat( void ) {
 	pfl.weaponFired = false;
  	if ( !influenceActive ) {
  		if ( ( usercmd.buttons & BUTTON_ATTACK ) && !weaponGone ) {
- 			FireWeapon();
+			if (currentWeapon != 11) {
+				FireWeapon();
+			}
+			else if (currentWeapon == 11) {
+				if (deflectionwindow > 0) {
+					common->Printf("Ninja Style\n");
+					FireWeapon();
+					deflectionwindow--;
+					deflection = true;
+					if (deflectionwindow == 0) {
+						deflection = false;
+					}
+				}
+				else if (deflectionrecharge > 0) {
+					common->Printf("Death by a thousand bullets\n");
+					deflectionrecharge--;
+				}
+				else {
+					deflectionwindow = 20;
+					deflectionrecharge = 5;
+				}
+			}
  		} else if ( oldButtons & BUTTON_ATTACK ) {
  			pfl.attackHeld = false;
  			weapon->EndAttack();
@@ -6133,6 +6155,10 @@ void idPlayer::Weapon_Combat( void ) {
  			UpdateHudAmmo( hud );
 		}
 	}
+}
+
+bool idPlayer::IsDeflecting(void) {
+	return deflection;
 }
 
 /*

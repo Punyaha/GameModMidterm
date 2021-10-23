@@ -10,6 +10,7 @@
 #include "ai/AI_Manager.h"
 #include "Projectile.h"
 #include "spawner.h"
+#include "\Users\punya\Desktop\9_layers_of_irony\Not_Git\Quake_4_Project\GameModMidterm\game\Player.h"
 
 /*
 ===============================================================================
@@ -416,6 +417,10 @@ void idProjectile::Launch( const idVec3 &start, const idVec3 &dir, const idVec3 
 		clipMask |= CONTENTS_LARGESHOTCLIP;
 	}
 
+	if (spawnArgs.GetBool("clipmask_solid", "1")) {
+		clipMask |= CONTENTS_SOLID;
+	}
+
 	if ( spawnArgs.GetBool( "clipmask_moveable", "0" ) ) {
 		clipMask |= CONTENTS_MOVEABLECLIP;
 	}
@@ -726,6 +731,31 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
   		common->DPrintf( "Projectile collision no impact\n" );
    		return true;
    	}
+	if (!(ent->IsType(idPlayer::GetClassType()))) {
+		common->Printf("We're not even near the end.\n");
+	}
+	if ( ent->IsType(idPlayer::GetClassType()) ) {
+		int holdthis=static_cast<idPlayer*>(ent)->GetCurrentWeapon();
+		if (holdthis == 11) {
+			if (static_cast<idPlayer*>(ent)->IsDeflecting()) {
+				common->Printf("the velocities of oour lives, %f, %f, %f\n", physicsObj.GetLinearVelocity().x, physicsObj.GetLinearVelocity().y, physicsObj.GetLinearVelocity().z);
+				idVec3 newVel = -1.0f*physicsObj.GetLinearVelocity();
+				physicsObj.SetLinearVelocity(newVel);
+
+				idVec3 newDir = physicsObj.GetLinearVelocity();
+				newDir.Normalize();
+				physicsObj.GetClipModel()->SetOwner(ent);
+				//physicsObj.extraPassEntity = ent;
+				launchTime = gameLocal.time;
+				launchDir = newDir;
+				physicsObj.SetOrigin(physicsObj.GetOrigin());
+				//physicsObj.SetAxis(static_cast<idPlayer*>(ent)->firstPersonViewAxis);
+				launchOrig = physicsObj.GetOrigin();
+				common->Printf("the velocities of oour lives, %f, %f, %f\n", physicsObj.GetLinearVelocity().x, physicsObj.GetLinearVelocity().y, physicsObj.GetLinearVelocity().z);
+				return false;
+			}
+		}
+	}
 
 	// If the hit entity is bound to an actor use the actor instead
 	if ( ent->GetTeamMaster( ) && ent->GetTeamMaster( )->IsType ( idActor::GetClassType() ) ) {
@@ -1240,6 +1270,12 @@ idVec3 idProjectile::GetVelocity( const idDict *projectile ) {
 		projectile->GetVector( "velocity", "0 0 0", velocity );
 	}
 	return velocity;
+}
+
+void idProjectile::reverseVelocity() {
+	idVec3 reverse;
+	reverse=physicsObj.GetLinearVelocity();
+	physicsObj.SetLinearVelocity(-reverse * 10.0f);
 }
 
 /*

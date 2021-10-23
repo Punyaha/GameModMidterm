@@ -100,6 +100,7 @@ public:	// common physics interface
 
 	void					SetLinearVelocity( const idVec3 &newLinearVelocity, int id = 0 );
 	void					SetDodgeVelocity();
+	void					Djumper();
 
 	const idVec3 &			GetLinearVelocity( int id = 0 ) const;
 
