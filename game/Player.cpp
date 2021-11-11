@@ -120,9 +120,12 @@ int dodgeupgrade = 1;
 int Dodge = dodgeupgrade;
 int dodgetimer = 0;
 int dodgetimer2 = 0;
-int deflectionwindow = 20;
-int deflectionrecharge = 5;
+int deflectionwindow = 15;
+int deflectionrecharge = 3;
 bool deflection = false;
+int shurikens = 1;
+bool stickdamage = false;
+bool hookdamage = false;
 // RAVEN END
 
 CLASS_DECLARATION( idActor, idPlayer )
@@ -3399,7 +3402,7 @@ void idPlayer::UpdateHudStats( idUserInterface *_hud ) {
 	int temp;
 	
 	assert ( _hud );
-
+	_hud -> SetStateInt("time_spent", gameLocal.time);
 	temp = _hud->State().GetInt ( "player_health", "-1" );
 	if ( temp != health ) {		
 		_hud->SetStateInt   ( "player_healthDelta", temp == -1 ? 0 : (temp - health) );
@@ -4302,25 +4305,11 @@ float idPlayer::PowerUpModifier( int type ) {
 
 	// Arena CTF powerups
 	if( PowerUpActive( POWERUP_AMMOREGEN ) ) {
-		switch( type ) {
-			case PMOD_FIRERATE: {
-				mod *= 0.7f;
-				break;
-			}
-		}
+		stickdamage = true;
 	}
 
 	if( PowerUpActive( POWERUP_DOUBLER ) ) {
-		switch( type ) {
-			case PMOD_PROJECTILE_DAMAGE: {
-				mod *= 2.0f;
-				break;
-			}
-			case PMOD_MELEE_DAMAGE: {
-				mod *= 2.0f;
-				break;
-			}
-		}
+		hookdamage = true;
 	}
 
 //RITUAL BEGIN
@@ -4342,16 +4331,7 @@ float idPlayer::PowerUpModifier( int type ) {
 	}
 //RITUAL END	
 	if( PowerUpActive( POWERUP_SCOUT ) ) {
-		switch( type ) {
-			case PMOD_FIRERATE: {
-				mod *= (2.0f / 3.0f);
-				break;
-			}
-			case PMOD_SPEED: {	
-				mod *= 1.5f;
-				break;
-			}
-		}
+		shurikens = 3;
 	}
 
 	return mod;
@@ -6130,10 +6110,14 @@ void idPlayer::Weapon_Combat( void ) {
 					}
 				}
 				else if (deflectionrecharge > 0) {
+					pfl.attackHeld = false;
+					weapon->EndAttack();
 					common->Printf("Death by a thousand bullets\n");
 					deflectionrecharge--;
 				}
 				else {
+					pfl.attackHeld = false;
+					weapon->EndAttack();
 					deflectionwindow = 20;
 					deflectionrecharge = 5;
 				}
@@ -6160,6 +6144,38 @@ void idPlayer::Weapon_Combat( void ) {
 bool idPlayer::IsDeflecting(void) {
 	return deflection;
 }
+int idPlayer::Shurikens(void) {
+	return shurikens;
+}
+void idPlayer::StickJump(void) {
+	idVec3 knockback = firstPersonViewAxis[0];
+	knockback.Normalize();
+	common->Printf("We're jumping men. Going all the way to, %f,%f,%f\n", knockback[0], knockback[1], knockback[2]);
+	knockback[0] = -knockback[0] * 1000.0f;
+	knockback[1] = -knockback[1]*1000.0f;
+	knockback[2] = -knockback[2]*2000.0f;
+	common->Printf("We're jumping men. Going all the way to, %f,%f,%f\n", knockback[0], knockback[1], knockback[2]);
+	physicsObj.SetLinearVelocity(idVec3(0.0f,0.0f,0.0f));
+	physicsObj.SetLinearVelocity(knockback);
+}
+bool idPlayer::WeKill(void) {
+	if (currentWeapon == 2) {
+		return stickdamage;
+	}
+	else {
+		return hookdamage;
+	}
+}
+void idPlayer::Hooky(void) {
+	idVec3 knockback = firstPersonViewAxis[0];
+	knockback.Normalize();
+	knockback[0] = knockback[0] * 2000.0f;
+	knockback[1] = knockback[1] * 2000.0f;
+	knockback[2] = knockback[2] * 3000.0f;
+	physicsObj.SetLinearVelocity(idVec3(0.0f, 0.0f, 0.0f));
+	physicsObj.SetLinearVelocity(knockback);
+}
+
 
 /*
 ===============
@@ -8791,7 +8807,6 @@ void idPlayer::AdjustSpeed( void ) {
 		speed *= 0.33f;
 	}
 	if (usercmd.buttons == 16 && Dodge > 0 && dodgetimer2 == 0) {
-		common->Printf("what button am I pressing? %i\n", usercmd.buttons);
 		idVec3 woosh = physicsObj.GetLinearVelocity();
 		woosh.z = 0;
 		woosh *= 6.0f;

@@ -731,31 +731,6 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
   		common->DPrintf( "Projectile collision no impact\n" );
    		return true;
    	}
-	if (!(ent->IsType(idPlayer::GetClassType()))) {
-		common->Printf("We're not even near the end.\n");
-	}
-	if ( ent->IsType(idPlayer::GetClassType()) ) {
-		int holdthis=static_cast<idPlayer*>(ent)->GetCurrentWeapon();
-		if (holdthis == 11) {
-			if (static_cast<idPlayer*>(ent)->IsDeflecting()) {
-				common->Printf("the velocities of oour lives, %f, %f, %f\n", physicsObj.GetLinearVelocity().x, physicsObj.GetLinearVelocity().y, physicsObj.GetLinearVelocity().z);
-				idVec3 newVel = -1.0f*physicsObj.GetLinearVelocity();
-				physicsObj.SetLinearVelocity(newVel);
-
-				idVec3 newDir = physicsObj.GetLinearVelocity();
-				newDir.Normalize();
-				physicsObj.GetClipModel()->SetOwner(ent);
-				//physicsObj.extraPassEntity = ent;
-				launchTime = gameLocal.time;
-				launchDir = newDir;
-				physicsObj.SetOrigin(physicsObj.GetOrigin());
-				//physicsObj.SetAxis(static_cast<idPlayer*>(ent)->firstPersonViewAxis);
-				launchOrig = physicsObj.GetOrigin();
-				common->Printf("the velocities of oour lives, %f, %f, %f\n", physicsObj.GetLinearVelocity().x, physicsObj.GetLinearVelocity().y, physicsObj.GetLinearVelocity().z);
-				return false;
-			}
-		}
-	}
 
 	// If the hit entity is bound to an actor use the actor instead
 	if ( ent->GetTeamMaster( ) && ent->GetTeamMaster( )->IsType ( idActor::GetClassType() ) ) {
@@ -800,6 +775,27 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 		ent->ProcessEvent( &EV_Activate , this );
 	}
 
+	if (ent->IsType(idPlayer::GetClassType())) {
+		int holdthis = static_cast<idPlayer*>(ent)->GetCurrentWeapon();
+		if (holdthis == 11) {
+			if (static_cast<idPlayer*>(ent)->IsDeflecting()) {
+				idVec3 newVel = -1.0f * physicsObj.GetLinearVelocity();
+				physicsObj.SetLinearVelocity(newVel);
+
+				idVec3 newDir = physicsObj.GetLinearVelocity();
+				newDir.Normalize();
+				physicsObj.GetClipModel()->SetOwner(ent);
+				launchTime = gameLocal.time;
+				launchDir = newDir;
+				physicsObj.SetOrigin(physicsObj.GetOrigin());
+				launchOrig = physicsObj.GetOrigin();
+
+				StartSound("snd_ricochet", SND_CHANNEL_ITEM, 0, true, NULL);
+				return false;
+			}
+		}
+	}
+
 	// If the projectile hits water then we need to let the projectile keep going
 	if ( ent->GetPhysics()->GetContents() & CONTENTS_WATER ) {
 		if ( !physicsObj.IsInWater( ) ) {
@@ -829,9 +825,7 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 			if ( bounceCount != -1 ) {
 				bounceCount--;
 			}
-			
 			StartSound( "snd_ricochet", SND_CHANNEL_ITEM, 0, true, NULL );
-
 			float len = velocity.Length();
 			if ( len > BOUNCE_SOUND_MIN_VELOCITY ) {
 				if ( ent->IsType ( idMover::GetClassType ( ) ) ) {			
@@ -839,12 +833,13 @@ bool idProjectile::Collide( const trace_t &collision, const idVec3 &velocity, bo
 						gameLocal.GetEffect(spawnArgs,"fx_bounce",collision.c.materialType), 
 						collision.c.point, collision.c.normal.ToMat3(), 
 						false, vec3_origin, true );
-				} else {
-					gameLocal.PlayEffect( 
-						gameLocal.GetEffect(spawnArgs,"fx_bounce",collision.c.materialType), 
-						collision.c.point, collision.c.normal.ToMat3(), 
-						false, vec3_origin, true );
-				}			
+				}
+				else {
+					gameLocal.PlayEffect(
+						gameLocal.GetEffect(spawnArgs, "fx_bounce", collision.c.materialType),
+						collision.c.point, collision.c.normal.ToMat3(),
+						false, vec3_origin, true);
+				}
 			} else {
 				// FIXME: clean up
 				idMat3 axis( rotation.GetCurrentValue(gameLocal.GetTime()).ToMat3() );

@@ -32,6 +32,7 @@ private:
 	idVec2				chargeGlow;
 	bool				fireForced;
 	int					fireHeldTime;
+	int					recharge=1;
 
 	stateResult_t		State_Raise				( const stateParms_t& parms );
 	stateResult_t		State_Lower				( const stateParms_t& parms );
@@ -105,32 +106,41 @@ bool rvWeaponBlaster::UpdateAttack ( void ) {
 	// then start the shooting process.
 	if ( wsfl.attack && gameLocal.time >= nextAttackTime ) {
 		// Save the time which the fire button was pressed
-		if ( fireHeldTime == 0 ) {		
-			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier ( PMOD_FIRERATE ));
+		if ( fireHeldTime == 0 ) {
+			nextAttackTime = gameLocal.time + (fireRate * owner->PowerUpModifier(PMOD_FIRERATE));
 			fireHeldTime   = gameLocal.time;
-			viewModel->SetShaderParm ( BLASTER_SPARM_CHARGEGLOW, chargeGlow[0] );
 		}
-	}		
-
+	}
 	// If they have the charge mod and they have overcome the initial charge 
 	// delay then transition to the charge state.
 	if ( fireHeldTime != 0 ) {
-		if ( gameLocal.time - fireHeldTime > chargeDelay ) {
-			SetState ( "Charge", 4 );
-			return true;
-		}
-
 		// If the fire button was let go but was pressed at one point then 
 		// release the shot.
 		if ( !wsfl.attack ) {
+			common->Printf("We're fucked down the chain man\n");
+			fireHeldTime == 0;
 			idPlayer * player = gameLocal.GetLocalPlayer();
 			if( player )	{
+				common->Printf("Finally someone let me out of my chain\n");
 			
 				if( player->GuiActive())	{
 					//make sure the player isn't looking at a gui first
 					SetState ( "Lower", 0 );
-				} else {
-					SetState ( "Fire", 0 );
+				}
+				else {
+					if (recharge == 0) {
+						recharge = owner->Shurikens();
+					}
+					if (recharge != 0) {
+						recharge--;
+						SetState("Fire", 0);
+						if (recharge == 0) {
+							nextAttackTime = gameLocal.time + 20000;
+						}
+					}
+					else {
+						return false;
+					}
 				}
 			}
 			return true;
@@ -426,16 +436,16 @@ stateResult_t rvWeaponBlaster::State_Fire ( const stateParms_t& parms ) {
 
 
 	
-			if ( gameLocal.time - fireHeldTime > chargeTime ) {	
+/*			if ( gameLocal.time - fireHeldTime > chargeTime ) {	
 				Attack ( true, 100, 20.0f, 0, 10.0f );
 				PlayEffect ( "fx_chargedflash", barrelJointView, false );
 				PlayAnim( ANIMCHANNEL_ALL, "chargedfire", parms.blendFrames );
-			} else {
+			} else {*/
 				common->Printf("This is doing a thing");
 				Attack ( false, 1, spread, 0, 1000.0f );
 				PlayEffect ( "fx_normalflash", barrelJointView, false );
 				PlayAnim( ANIMCHANNEL_ALL, "fire", parms.blendFrames );
-			}
+			//}
 			fireHeldTime = 0;
 			
 			return SRESULT_STAGE(FIRE_WAIT);

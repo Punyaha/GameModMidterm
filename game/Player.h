@@ -567,6 +567,10 @@ public:
 	void					GiveWeaponMod				( const char* weaponmod );
 
 	bool					IsDeflecting				(void);
+	int						Shurikens					(void);
+	void					StickJump					(void);
+	bool					WeKill						(void);
+	void					Hooky						(void);
 
 	int						SlotForWeapon				( const char *weaponName );
 

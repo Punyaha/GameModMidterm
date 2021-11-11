@@ -304,7 +304,7 @@ void rvWeaponGauntlet::Attack ( void ) {
 		} else {
 			PlayLoopSound( LOOP_NONE );
 		}
-		nextAttackTime = gameLocal.time + fireRate;
+		nextAttackTime = gameLocal.time;
 	}
 }
 

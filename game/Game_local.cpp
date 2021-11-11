@@ -3465,6 +3465,8 @@ idGameLocal::RunFrame
 	idPlayer	*player;
 	const renderView_t *view;
 
+
+
 	editors = activeEditors;
 	isLastPredictFrame = lastCatchupFrame;
 
@@ -3927,7 +3929,7 @@ escReply_t idGameLocal::HandleESC( idUserInterface **gui ) {
 	}
 #endif
 //RAVEN END
-
+	
 	if ( isMultiplayer ) {
 		*gui = StartMenu();
 		// we may set the gui back to NULL to hide it
@@ -7715,16 +7717,26 @@ idEntity* idGameLocal::HitScan(
 					// Inflict damage
 					if ( tr.c.materialType ) {
 						damage = hitscanDict.GetString( va("def_damage_%s", tr.c.materialType->GetName()) );
+						common->Printf(damage,"\n");
 					}
 					if ( !damage || !*damage ) {
 						damage = hitscanDict.GetString ( "def_damage" );
+						common->Printf(damage, "\n");
 					}
 
 					if ( damage && damage[0] ) {
+						common->Printf(damage, "\n");
+
+
 						// RAVEN BEGIN
 						// ddynerman: stats
 						if( owner->IsType( idPlayer::GetClassType() ) && ent->IsType( idActor::GetClassType() ) && ent != owner && !((idPlayer*)owner)->pfl.dead ) {
 							statManager->WeaponHit( (idActor*)owner, ent, ((idPlayer*)owner)->GetCurrentWeapon() );
+						}
+						if (((idPlayer*)owner)->GetCurrentWeapon() == 2 || ((idPlayer*)owner)->GetCurrentWeapon() == 7) {
+							if (((idPlayer*)owner)->WeKill()) {
+								damage = "damage_blaster";
+							}
 						}
 						// RAVEN END
 						ent->Damage( owner, owner, dir, damage, damageScale, hitJoint );
